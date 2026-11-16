@@ -1,0 +1,14 @@
+plugin: amazon.aws.aws_ec2
+regions:
+  - us-east-1
+aws_access_key: test
+aws_secret_key: test
+endpoint_url: http://localhost:4566
+filters:
+  tag:Role: jenkins
+  instance-state-name: running
+keyed_groups:
+  - key: tags.Role
+    prefix: role
+compose:
+  ansible_host: public_ip_address
