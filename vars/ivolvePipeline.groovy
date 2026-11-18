@@ -1,15 +1,16 @@
 def call(Map config) {
     pipeline {
-        agent any
+        agent { label 'built-in' }
 
         environment {
-            SERVICE_NAME = "${config.serviceName}"
-            SERVICE_DIR  = "${config.serviceDir}"
-            MANIFEST_FILE = "${config.manifestFile}"
-            ECR_REGISTRY = "000000000000.dkr.ecr.us-east-1.host.docker.internal:5100"
-            IMAGE_REPO   = "${ECR_REGISTRY}/ivolve/${SERVICE_NAME}"
-            IMAGE_TAG    = "${env.BUILD_NUMBER}"
-            GIT_REPO     = "github.com/YosraMamdouh/CloudDevOpsProject.git"
+            SERVICE_NAME    = "${config.serviceName}"
+            SERVICE_DIR     = "${config.serviceDir}"
+            MANIFEST_FILE   = "${config.manifestFile}"
+            ECR_REGISTRY    = "000000000000.dkr.ecr.us-east-1.host.docker.internal:5100"
+            IMAGE_REPO      = "${ECR_REGISTRY}/ivolve/${SERVICE_NAME}"
+            IMAGE_TAG       = "${env.BUILD_NUMBER}"
+            GIT_REPO        = "github.com/YosraMamdouh/CloudDevOpsProject.git"
+            DOCKER_BUILDKIT = "0"
         }
 
         stages {
