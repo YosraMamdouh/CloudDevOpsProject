@@ -23,7 +23,7 @@ stages {
 stage('Scan Image') {
                 steps {
                     sh """
-                        trivy image --exit-code 0 --severity HIGH,CRITICAL ${IMAGE_REPO}:${IMAGE_TAG}
+                        trivy image --timeout 15m --exit-code 0 --severity HIGH,CRITICAL ${IMAGE_REPO}:${IMAGE_TAG}
                     """
                 }
             }
