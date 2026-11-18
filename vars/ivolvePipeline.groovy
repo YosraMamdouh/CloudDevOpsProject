@@ -6,7 +6,7 @@ def call(Map config) {
             SERVICE_NAME = "${config.serviceName}"
             SERVICE_DIR  = "${config.serviceDir}"
             MANIFEST_FILE = "${config.manifestFile}"
-            ECR_REGISTRY = "000000000000.dkr.ecr.us-east-1.localhost:5100"
+            ECR_REGISTRY = "000000000000.dkr.ecr.us-east-1.host.docker.internal:5100"
             IMAGE_REPO   = "${ECR_REGISTRY}/ivolve/${SERVICE_NAME}"
             IMAGE_TAG    = "${env.BUILD_NUMBER}"
             GIT_REPO     = "github.com/YosraMamdouh/CloudDevOpsProject.git"
@@ -32,7 +32,7 @@ def call(Map config) {
             stage('Push Image') {
                 steps {
                     sh """
-                        aws --endpoint-url=http://localhost:4566 ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ECR_REGISTRY}
+                        aws --endpoint-url=http://host.docker.internal:4566 ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ECR_REGISTRY}
                         docker push ${IMAGE_REPO}:${IMAGE_TAG}
                     """
                 }
