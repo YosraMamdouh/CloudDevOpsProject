@@ -1,5 +1,5 @@
 def call(Map config) {
-    pipeline {
+pipeline {
         agent { label 'built-in' }
 
         environment {
@@ -12,8 +12,7 @@ def call(Map config) {
             GIT_REPO        = "github.com/YosraMamdouh/CloudDevOpsProject.git"
             DOCKER_BUILDKIT = "0"
         }
-
-        stages {
+stages {
             stage('Build Image') {
                 steps {
                     sh """
@@ -21,41 +20,35 @@ def call(Map config) {
                     """
                 }
             }
-
-            stage('Scan Image') {
+stage('Scan Image') {
                 steps {
                     sh """
                         trivy image --exit-code 0 --severity HIGH,CRITICAL ${IMAGE_REPO}:${IMAGE_TAG}
                     """
                 }
             }
-
-            stage('Push Image') {
+stage('Push Image') {
                 steps {
                     sh """
-                        aws --endpoint-url=http://host.docker.internal:4566 ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ECR_REGISTRY}
                         docker push ${IMAGE_REPO}:${IMAGE_TAG}
                     """
                 }
             }
-
-            stage('Delete Image Locally') {
+stage('Delete Image Locally') {
                 steps {
                     sh """
                         docker rmi ${IMAGE_REPO}:${IMAGE_TAG} || true
                     """
                 }
             }
-
-            stage('Update Manifests') {
+stage('Update Manifests') {
                 steps {
                     sh """
                         sed -i "s|${IMAGE_REPO}:.*|${IMAGE_REPO}:${IMAGE_TAG}|g" k8s/${MANIFEST_FILE}
                     """
                 }
             }
-
-            stage('Push Manifests') {
+stage('Push Manifests') {
                 steps {
                     withCredentials([usernamePassword(credentialsId: 'github-creds', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
                         sh """
