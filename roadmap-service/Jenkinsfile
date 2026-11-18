@@ -1,0 +1,7 @@
+@Library('ivolve-shared-lib') _
+
+ivolvePipeline(
+    serviceName: 'roadmap-service',
+    serviceDir: 'roadmap-service',
+    manifestFile: '06-roadmap-service.yaml'
+)

@@ -1,0 +1,7 @@
+@Library('ivolve-shared-lib') _
+
+ivolvePipeline(
+    serviceName: 'frontend',
+    serviceDir: 'frontend',
+    manifestFile: '07-frontend.yaml'
+)

@@ -1,0 +1,7 @@
+@Library('ivolve-shared-lib') _
+
+ivolvePipeline(
+    serviceName: 'auth-service',
+    serviceDir: 'auth-service',
+    manifestFile: '05-auth-service.yaml'
+)
