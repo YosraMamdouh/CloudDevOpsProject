@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: auth-service
-          image: 000000000000.dkr.ecr.us-east-1.localhost:5100/ivolve/auth-service:64
+          image: 000000000000.dkr.ecr.us-east-1.localhost:5100/ivolve/auth-service:65
           ports:
             - containerPort: 5000
           envFrom:
