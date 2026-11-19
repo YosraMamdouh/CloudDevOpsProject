@@ -67,7 +67,7 @@ def call(Map config) {
         post {
             success {
                 emailext(
-                    to: 'yousramamdouh808@gmail.com',
+                    to: 'yousramamdouh1405@gmail.com',
                     subject: "✅ Build Success [${SERVICE_NAME}]: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                     body: """
                     <h3>Build and deployment completed successfully!</h3>
@@ -82,7 +82,7 @@ def call(Map config) {
             }
             failure {
                 emailext(
-                    to: 'yousramamdouh808@gmail.com',
+                    to: 'yousramamdouh1405@gmail.com',
                     subject: "❌ Build Failed [${SERVICE_NAME}]: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                     body: """
                     <h3>Project build failed!</h3>
