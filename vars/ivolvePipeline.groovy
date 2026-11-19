@@ -1,4 +1,3 @@
-// Trigger webhook and email notification test
 def call(Map config) {
     pipeline {
         agent { label 'built-in' }
