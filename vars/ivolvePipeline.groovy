@@ -63,8 +63,7 @@ def call(Map config) {
                 }
             }
         }
-
-        post {
+post {
             success {
                 emailext(
                     to: 'yousramamdouh1405@gmail.com',
@@ -90,12 +89,12 @@ def call(Map config) {
                     <p><b>Pipeline:</b> ${env.JOB_NAME}</p>
                     <p><b>Build Number:</b> #${env.BUILD_NUMBER}</p>
                     <p><b>Error Reason (Last 30 lines of build log):</b></p>
-                    <pre style="background:#f4f4f4;padding:10px;border:1px solid #ddd;">${BUILD_LOG, maxLines=30, escapeHtml=true}</pre>
+                    <pre style="background:#f4f4f4;padding:10px;border:1px solid #ddd;">\${BUILD_LOG, maxLines=30, escapeHtml=true}</pre>
                     <p><b>Full Console Log:</b> <a href="${env.BUILD_URL}console">${env.BUILD_URL}console</a></p>
                     """,
                     mimeType: 'text/html'
                 )
             }
-        }
+        }}
     }
 }
