@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: 000000000000.dkr.ecr.us-east-1.localhost:5100/ivolve/frontend:25
+          image: 000000000000.dkr.ecr.us-east-1.localhost:5100/ivolve/frontend:26
           ports:
             - containerPort: 3000
           envFrom:
