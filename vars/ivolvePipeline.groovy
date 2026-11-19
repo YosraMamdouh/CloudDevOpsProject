@@ -58,17 +58,21 @@ def call(Map config) {
                 }
             }
 
-            stage('Push Manifests') {
+  stage('Push Manifests') {
                 when { expression { env.LAST_AUTHOR != 'Jenkins CI' } }
                 steps {
                     withCredentials([usernamePassword(credentialsId: 'github-creds', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
                         sh """
+                            git rebase --abort || true
+                            rm -rf .git/rebase-merge .git/rebase-apply || true
                             git config user.email "jenkins@ivolve.local"
                             git config user.name "Jenkins CI"
                             git checkout -B main
+                            git fetch https://${GIT_USER}:${GIT_PASS}@${GIT_REPO} main
+                            git reset --hard FETCH_HEAD
+                            sed -i 's|${IMAGE_REPO}:.*|${IMAGE_REPO}:${IMAGE_TAG}|g' k8s/${MANIFEST_FILE}
                             git add k8s/${MANIFEST_FILE}
                             git commit -m "[skip ci] Update ${SERVICE_NAME} image tag to ${IMAGE_TAG}" || exit 0
-                            git pull --rebase https://${GIT_USER}:${GIT_PASS}@${GIT_REPO} main
                             git push https://${GIT_USER}:${GIT_PASS}@${GIT_REPO} main
                         """
                     }
