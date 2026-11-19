@@ -95,6 +95,6 @@ post {
                     mimeType: 'text/html'
                 )
             }
-        }}
+        }
     }
 }
