@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: roadmap-service
-          image: 000000000000.dkr.ecr.us-east-1.localhost:5100/ivolve/roadmap-service:26
+          image: 000000000000.dkr.ecr.us-east-1.localhost:5100/ivolve/roadmap-service:27
           ports:
             - containerPort: 8080
 ---
