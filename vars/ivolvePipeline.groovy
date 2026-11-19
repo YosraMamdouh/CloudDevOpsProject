@@ -49,15 +49,17 @@ def call(Map config) {
                     """
                 }
             }
-            stage('Push Manifests') {
+           stage('Push Manifests') {
                 steps {
                     withCredentials([usernamePassword(credentialsId: 'github-creds', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
                         sh """
                             git config user.email "jenkins@ivolve.local"
                             git config user.name "Jenkins CI"
+                            git checkout -B main
+                            git pull --rebase https://${GIT_USER}:${GIT_PASS}@${GIT_REPO} main
                             git add k8s/${MANIFEST_FILE}
-                            git commit -m "Update ${SERVICE_NAME} image tag to ${IMAGE_TAG}" || exit 0
-                            git push https://${GIT_USER}:${GIT_PASS}@${GIT_REPO} HEAD:main
+                            git commit -m "[skip ci] Update ${SERVICE_NAME} image tag to ${IMAGE_TAG}" || exit 0
+                            git push https://${GIT_USER}:${GIT_PASS}@${GIT_REPO} main
                         """
                     }
                 }
