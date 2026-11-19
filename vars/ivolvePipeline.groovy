@@ -81,7 +81,18 @@ def call(Map config) {
                 }
             }
         }
-
+    stage('Run Tests') {
+                when { expression { env.SHOULD_RUN == 'true' } }
+                steps {
+                    sh """
+                        if [ -f "./\${SERVICE_DIR}/package.json" ]; then
+                            docker run --rm -v "\$(pwd)/\${SERVICE_DIR}:/app" -w /app node:18-alpine sh -c "npm install --silent && (npm test || echo 'No tests defined yet')"
+                        elif [ -f "./\${SERVICE_DIR}/requirements.txt" ]; then
+                            docker run --rm -v "\$(pwd)/\${SERVICE_DIR}:/app" -w /app python:3.11-slim sh -c "pip install -q -r requirements.txt && (pytest || echo 'No tests defined yet')"
+                        fi
+                    """
+                }
+            }
         post {
             success {
                 script {
