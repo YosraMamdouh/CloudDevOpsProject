@@ -14,52 +14,54 @@ def call(Map config) {
         }
 
         stages {
-            stage('Check Commit Author') {
+            stage('Check Trigger') {
                 steps {
                     script {
-                        env.LAST_AUTHOR = sh(script: "git log -1 --pretty=format:'%an'", returnStdout: true).trim()
-                        echo "Last commit author: ${env.LAST_AUTHOR}"
+                        def lastAuthor = sh(script: "git log -1 --pretty=format:'%an'", returnStdout: true).trim()
+                        def isManual = currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause').size() > 0
+                        env.SHOULD_RUN = (lastAuthor != 'Jenkins CI' || isManual).toString()
+                        echo "Last author: ${lastAuthor} | Manual run: ${isManual} | Should run: ${env.SHOULD_RUN}"
                     }
                 }
             }
 
             stage('Build Image') {
-                when { expression { env.LAST_AUTHOR != 'Jenkins CI' } }
+                when { expression { env.SHOULD_RUN == 'true' } }
                 steps {
                     sh "docker build -t ${IMAGE_REPO}:${IMAGE_TAG} ./${SERVICE_DIR}"
                 }
             }
 
             stage('Scan Image') {
-                when { expression { env.LAST_AUTHOR != 'Jenkins CI' } }
+                when { expression { env.SHOULD_RUN == 'true' } }
                 steps {
                     sh "trivy image --timeout 15m --exit-code 0 --severity HIGH,CRITICAL ${IMAGE_REPO}:${IMAGE_TAG}"
                 }
             }
 
             stage('Push Image') {
-                when { expression { env.LAST_AUTHOR != 'Jenkins CI' } }
+                when { expression { env.SHOULD_RUN == 'true' } }
                 steps {
                     sh "docker push ${IMAGE_REPO}:${IMAGE_TAG}"
                 }
             }
 
             stage('Delete Image Locally') {
-                when { expression { env.LAST_AUTHOR != 'Jenkins CI' } }
+                when { expression { env.SHOULD_RUN == 'true' } }
                 steps {
                     sh "docker rmi ${IMAGE_REPO}:${IMAGE_TAG} || true"
                 }
             }
 
             stage('Update Manifests') {
-                when { expression { env.LAST_AUTHOR != 'Jenkins CI' } }
+                when { expression { env.SHOULD_RUN == 'true' } }
                 steps {
                     sh "sed -i 's|${IMAGE_REPO}:.*|${IMAGE_REPO}:${IMAGE_TAG}|g' k8s/${MANIFEST_FILE}"
                 }
             }
 
-  stage('Push Manifests') {
-                when { expression { env.LAST_AUTHOR != 'Jenkins CI' } }
+            stage('Push Manifests') {
+                when { expression { env.SHOULD_RUN == 'true' } }
                 steps {
                     withCredentials([usernamePassword(credentialsId: 'github-creds', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
                         sh """
@@ -83,7 +85,7 @@ def call(Map config) {
         post {
             success {
                 script {
-                    if (env.LAST_AUTHOR != 'Jenkins CI') {
+                    if (env.SHOULD_RUN == 'true') {
                         emailext(
                             to: 'yousramamdouh1405@gmail.com',
                             subject: "✅ Build Success [${SERVICE_NAME}]: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
