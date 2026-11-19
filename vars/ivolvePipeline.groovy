@@ -56,9 +56,9 @@ def call(Map config) {
                             git config user.email "jenkins@ivolve.local"
                             git config user.name "Jenkins CI"
                             git checkout -B main
-                            git pull --rebase https://${GIT_USER}:${GIT_PASS}@${GIT_REPO} main
                             git add k8s/${MANIFEST_FILE}
                             git commit -m "[skip ci] Update ${SERVICE_NAME} image tag to ${IMAGE_TAG}" || exit 0
+                            git pull --rebase https://${GIT_USER}:${GIT_PASS}@${GIT_REPO} main
                             git push https://${GIT_USER}:${GIT_PASS}@${GIT_REPO} main
                         """
                     }
