@@ -14,42 +14,52 @@ def call(Map config) {
         }
 
         stages {
+            stage('Check Commit Author') {
+                steps {
+                    script {
+                        env.LAST_AUTHOR = sh(script: "git log -1 --pretty=format:'%an'", returnStdout: true).trim()
+                        echo "Last commit author: ${env.LAST_AUTHOR}"
+                    }
+                }
+            }
+
             stage('Build Image') {
+                when { expression { env.LAST_AUTHOR != 'Jenkins CI' } }
                 steps {
-                    sh """
-                        docker build -t ${IMAGE_REPO}:${IMAGE_TAG} ./${SERVICE_DIR}
-                    """
+                    sh "docker build -t ${IMAGE_REPO}:${IMAGE_TAG} ./${SERVICE_DIR}"
                 }
             }
+
             stage('Scan Image') {
+                when { expression { env.LAST_AUTHOR != 'Jenkins CI' } }
                 steps {
-                    sh """
-                        trivy image --timeout 15m --exit-code 0 --severity HIGH,CRITICAL ${IMAGE_REPO}:${IMAGE_TAG}
-                    """
+                    sh "trivy image --timeout 15m --exit-code 0 --severity HIGH,CRITICAL ${IMAGE_REPO}:${IMAGE_TAG}"
                 }
             }
+
             stage('Push Image') {
+                when { expression { env.LAST_AUTHOR != 'Jenkins CI' } }
                 steps {
-                    sh """
-                        docker push ${IMAGE_REPO}:${IMAGE_TAG}
-                    """
+                    sh "docker push ${IMAGE_REPO}:${IMAGE_TAG}"
                 }
             }
+
             stage('Delete Image Locally') {
+                when { expression { env.LAST_AUTHOR != 'Jenkins CI' } }
                 steps {
-                    sh """
-                        docker rmi ${IMAGE_REPO}:${IMAGE_TAG} || true
-                    """
+                    sh "docker rmi ${IMAGE_REPO}:${IMAGE_TAG} || true"
                 }
             }
+
             stage('Update Manifests') {
+                when { expression { env.LAST_AUTHOR != 'Jenkins CI' } }
                 steps {
-                    sh """
-                        sed -i "s|${IMAGE_REPO}:.*|${IMAGE_REPO}:${IMAGE_TAG}|g" k8s/${MANIFEST_FILE}
-                    """
+                    sh "sed -i 's|${IMAGE_REPO}:.*|${IMAGE_REPO}:${IMAGE_TAG}|g' k8s/${MANIFEST_FILE}"
                 }
             }
-           stage('Push Manifests') {
+
+            stage('Push Manifests') {
+                when { expression { env.LAST_AUTHOR != 'Jenkins CI' } }
                 steps {
                     withCredentials([usernamePassword(credentialsId: 'github-creds', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
                         sh """
@@ -65,21 +75,26 @@ def call(Map config) {
                 }
             }
         }
-post {
+
+        post {
             success {
-                emailext(
-                    to: 'yousramamdouh1405@gmail.com',
-                    subject: "✅ Build Success [${SERVICE_NAME}]: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                    body: """
-                    <h3>Build and deployment completed successfully!</h3>
-                    <p><b>Service:</b> ${SERVICE_NAME}</p>
-                    <p><b>Pipeline:</b> ${env.JOB_NAME}</p>
-                    <p><b>Build Number:</b> #${env.BUILD_NUMBER}</p>
-                    <p><b>Image Tag:</b> ${IMAGE_REPO}:${IMAGE_TAG}</p>
-                    <p><b>Build Details:</b> <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
-                    """,
-                    mimeType: 'text/html'
-                )
+                script {
+                    if (env.LAST_AUTHOR != 'Jenkins CI') {
+                        emailext(
+                            to: 'yousramamdouh1405@gmail.com',
+                            subject: "✅ Build Success [${SERVICE_NAME}]: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                            body: """
+                            <h3>Build and deployment completed successfully!</h3>
+                            <p><b>Service:</b> ${SERVICE_NAME}</p>
+                            <p><b>Pipeline:</b> ${env.JOB_NAME}</p>
+                            <p><b>Build Number:</b> #${env.BUILD_NUMBER}</p>
+                            <p><b>Image Tag:</b> ${IMAGE_REPO}:${IMAGE_TAG}</p>
+                            <p><b>Build Details:</b> <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
+                            """,
+                            mimeType: 'text/html'
+                        )
+                    }
+                }
             }
             failure {
                 emailext(
@@ -96,7 +111,6 @@ post {
                     """,
                     mimeType: 'text/html'
                 )
-                
             }
         }
     }
