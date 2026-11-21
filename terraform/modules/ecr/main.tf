@@ -1,10 +1,14 @@
 resource "aws_ecr_repository" "repos" {
-  for_each             = toset(["frontend", "auth-service", "roadmap-service"])
-  name                 = "${var.project_name}/${each.key}"
+  for_each             = toset(var.repositories)
+  name                 = each.value
   image_tag_mutability = "MUTABLE"
   force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = true
+  }
+
+  tags = {
+    Project = var.project_name
   }
 }
