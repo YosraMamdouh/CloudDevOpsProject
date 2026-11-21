@@ -57,3 +57,9 @@ variable "ecr_repositories" {
   type        = list(string)
   default     = ["ivolve/frontend", "ivolve/auth-service", "ivolve/roadmap-service"]
 }
+
+variable "jenkins_ami_id" {
+  description = "Optional custom AMI ID (leave empty for latest Ubuntu on real AWS)"
+  type        = string
+  default     = ""
+}

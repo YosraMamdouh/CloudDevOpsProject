@@ -14,6 +14,7 @@ module "server" {
   public_subnet_id = module.network.public_subnet_ids[0]
   instance_type    = var.jenkins_instance_type
   key_name         = var.key_name
+  ami_id           = var.jenkins_ami_id
 }
 
 module "eks" {

@@ -1,4 +1,5 @@
 data "aws_ami" "ubuntu" {
+  count       = var.ami_id == "" ? 1 : 0
   most_recent = true
   owners      = ["099720109477"] # Canonical
 
@@ -42,7 +43,7 @@ resource "aws_security_group" "jenkins_sg" {
 }
 
 resource "aws_instance" "jenkins" {
-  ami                         = data.aws_ami.ubuntu.id
+  ami                         = var.ami_id != "" ? var.ami_id : data.aws_ami.ubuntu[0].id
   instance_type               = var.instance_type
   subnet_id                   = var.public_subnet_id
   vpc_security_group_ids      = [aws_security_group.jenkins_sg.id]

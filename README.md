@@ -1,266 +1,117 @@
-# End-to-End AIOps Platform: Automated RCA & Anomaly Detection
+<div align="center">
+# CloudDevOpsProject - End-to-End DevSecOps, GitOps & Terraform IaC Platform
 
-A production-grade, closed-loop AIOps platform that runs on Kubernetes, streams metrics and logs, applies machine learning models for anomaly detection, diagnoses root causes (RCA), and dispatches automated alerts and remediations.
+**Automated Microservices CI/CD Pipeline with Security Vulnerability Auditing, Loop-Free GitOps Synchronization, Multi-Replica Kubernetes Orchestration, and Modular AWS Terraform Infrastructure**
+
+![Jenkins](https://img.shields.io/badge/Jenkins-CI%2FCD-D24939?style=for-the-badge&logo=jenkins&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Containers-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![Trivy](https://img.shields.io/badge/Trivy-DevSecOps-1904DA?style=for-the-badge&logo=aquasecurity&logoColor=white)
+![ArgoCD](https://img.shields.io/badge/Argo_CD-GitOps-EF7B4D?style=for-the-badge&logo=argo&logoColor=white)
+![Kubernetes](https://img.shields.io/badge/Kubernetes-K3s-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white)
+![Terraform](https://img.shields.io/badge/Terraform-IaC-7B42BC?style=for-the-badge&logo=terraform&logoColor=white)
+![AWS](https://img.shields.io/badge/AWS-Cloud-232F3E?style=for-the-badge&logo=amazonwebservices&logoColor=white)
+
+</div>
+---
+
+## Overview
+
+**CloudDevOpsProject** is a cloud-native, multi-tier microservices application engineered with an end-to-end **DevSecOps, GitOps, and Infrastructure as Code (IaC)** lifecycle. Every commit pushed to the repository triggers an isolated, parameterized **Jenkins Shared Library** pipeline that validates code integrity, builds immutable Docker images, audits containers for vulnerabilities using **Trivy**, pushes artifacts to a container registry, mutates declarative Kubernetes manifests, dispatches real-time HTML email alerts, and synchronizes cluster state via **Argo CD** with zero downtime. Underlying cloud infrastructure is provisioned declaratively using modular **Terraform** backed by remote **S3** state management.
 
 ---
 
-## High-Level Architecture
+## System Architecture & GitOps Workflow
 
-```mermaid
-flowchart TD
-    subgraph K8s["Kubernetes Cluster (aiops namespace)"]
-        Ingress["Service: NodePort 30080 / Port-Forward 8000"] --> Backend["aiops-backend (FastAPI Replicas)"]
-        Backend --> Postgres[("PostgreSQL 16 Storage")]
-        Backend --> Redis[("Redis 7 Cache")]
-        Backend -->|"/metrics"| Prometheus["kube-prometheus-stack (Phase 3)"]
-        Backend -->|"stdout (JSON)"| FluentBit["Fluent Bit / Promtail (Phase 3)"]
-    end
-
-    subgraph CI_CD["CI/CD Pipeline (Phase 2)"]
-        GitRepo["Git Repository"] --> Jenkins["Jenkins CI/CD Pipeline"]
-        Jenkins -->|Lint & Test| DockerBuild["Docker Build & Push"]
-        DockerBuild -->|kubectl apply| K8s
-    end
-
-    subgraph AIOps_Engine["AI Anomaly Detection & RCA Engine (Phase 4)"]
-        Prometheus --> TelemetryPoller["Telemetry Ingest Worker"]
-        FluentBit --> LogStore["Log Aggregator"]
-        TelemetryPoller --> MLModel["Isolation Forest / LSTM-Autoencoder"]
-        MLModel -->|Anomaly Flagged| RCAAgent["RCA & Recommendation Engine"]
-        LogStore -->|Last 50 Logs| RCAAgent
-        RCAAgent --> AlertDispatcher["Slack / Discord Webhook Alert"]
-    end
-
-    subgraph Chaos["Chaos Engineering (Phase 5)"]
-        ChaosScript["Fault Injector (CPU/Mem/500/DB)"] -->|Trigger| Backend
-    end
-```
+    [Developer Push] --> [GitHub Repository (main)] --(Webhook via Ngrok)--> [Jenkins Shared Library]
+                                                                                     |
+         +---------------------------------------------------------------------------+
+         v
+    [Author Guard] -> [Tests] -> [Docker Build] -> [Trivy Scan] -> [Push Registry] -> [Update k8s/*.yaml] -> [SMTP Alert]
+                                                                                              |
+                                                                                     (GitOps Auto-Sync)
+                                                                                              v
+                                                                                  [Argo CD Controller (K3s)]
+                                                                                              |
+                                                    +---------------------+-------------------+------------------+
+                                                    v                     v                                      v
+                                             [Frontend (2x)]      [Auth Service (2x)]                 [Roadmap Service (2x)]
+                                                                          |                                      |
+                                                                          +--------------+-----------------------+
+                                                                                         v
+                                                                              [MySQL 8.0 StatefulSet]
 
 ---
 
-## Phase 1: Local Infrastructure & Microservices Setup
+## Microservices & Infrastructure Matrix
 
-### Overview
-Phase 1 establishes the containerized microservices stack, baseline resource limits, health probes, and Kubernetes manifests:
-
-- **Backend Application (`backend/`)**:
-  - FastAPI asynchronous microservice with PostgreSQL persistence and Redis cache-aside.
-  - Native Prometheus instrumentation exposing `/metrics` via `prometheus-fastapi-instrumentator`.
-  - Structured JSON logging formatted for direct consumption by Promtail / Fluent Bit.
-  - Probes: `/api/v1/health/live` (process liveness) and `/api/v1/health/ready` (checks DB and Redis).
-  - Built-in Chaos Simulation endpoints:
-    - `POST /api/v1/chaos/cpu`: Multi-threaded CPU burn to simulate compute exhaustion.
-    - `POST /api/v1/chaos/memory`: Memory heap allocation to simulate leaks and OOM scenarios.
-    - `POST /api/v1/chaos/error-rate`: Controlled HTTP 500 error injection.
-    - `POST /api/v1/chaos/latency`: Artificial latency injection.
-- **Microservices Data Tier**:
-  - PostgreSQL 16 Alpine with PersistentVolumeClaim (`postgres-pvc`) and `pg_isready` health probes.
-  - Redis 7 Alpine with health checking via `redis-cli ping`.
-- **Production Kubernetes Manifests (`k8s/`)**:
-  - Explicit CPU and Memory limits (Requests: 100m CPU / 128Mi RAM; Limits: 500m CPU / 512Mi RAM) to provide a predictable baseline for anomaly detection.
-  - ConfigMaps and Secrets for decoupled 12-factor configuration.
-  - Prometheus auto-scraping pod annotations.
-  - Service exposing port 8000 (NodePort 30080).
+| Component | Architectural Role | Source Directory | Kubernetes Manifest | Container Registry & Port | Replicas |
+| :--- | :--- | :--- | :--- | :--- | :---: |
+| **Frontend UI** | Web Interface & Client Routing | `frontend/` | `k8s/07-frontend.yaml` | `localhost:5100/ivolve/frontend` (`:3000`) | `2` |
+| **Auth Service** | Identity & Token Management | `auth-service/` | `k8s/05-auth.yaml` | `localhost:5100/ivolve/auth-service` (`:5000`) | `2` |
+| **Roadmap Service** | Core Business Logic & REST API | `roadmap-service/` | `k8s/06-roadmap.yaml` | `localhost:5100/ivolve/roadmap-service` (`:8080`) | `2` |
+| **MySQL Database** | Persistent Relational Storage | - | StatefulSet (`mysql-0`) | `mysql:8.0` (`:3306`) | `1` |
+| **Shared Library** | DRY CI/CD Pipeline Engine | `vars/ivolvePipeline.groovy` | - | Parameterized Groovy DSL | - |
 
 ---
 
-## Project Structure
+## AWS Infrastructure as Code (Modular Terraform)
 
-```
-Final Project/
-├── backend/
-│   ├── app/
-│   │   ├── api/
-│   │   │   ├── chaos.py               # Chaos & fault-injection endpoints
-│   │   │   ├── health.py              # Liveness and Readiness probes
-│   │   │   └── orders.py              # Business CRUD API (DB + Cache)
-│   │   ├── config.py                  # Pydantic Settings
-│   │   ├── database.py                # SQLAlchemy DB engine & healthcheck
-│   │   ├── logger.py                  # Structured JSON logger
-│   │   ├── main.py                    # FastAPI app entrypoint & metrics instrumentor
-│   │   ├── models.py                  # ORM database models
-│   │   ├── redis_client.py            # Redis client & healthcheck
-│   │   └── schemas.py                 # Pydantic request/response schemas
-│   ├── tests/
-│   │   ├── test_health.py             # Health & metrics probe unit tests
-│   │   └── test_orders.py             # Business logic unit tests
-│   ├── Dockerfile                     # Multi-stage secure Dockerfile (non-root)
-│   ├── .dockerignore
-│   └── requirements.txt
-├── k8s/
-│   ├── 00-namespace.yaml              # Dedicated 'aiops' namespace
-│   ├── 01-configmaps.yaml             # App configuration
-│   ├── 02-secrets.yaml                # DB and cache credentials
-│   ├── 03-postgres-pvc.yaml           # PVC for PostgreSQL
-│   ├── 03-postgres.yaml               # PostgreSQL Deployment & Service
-│   ├── 04-redis.yaml                  # Redis Deployment & Service
-│   ├── 05-backend.yaml                # FastAPI Deployment (2 replicas, limits, probes)
-│   └── 06-backend-service.yaml        # NodePort Service (Port 30080)
-├── scripts/
-│   ├── setup_cluster.ps1              # Cluster detection & bootstrap helper
-│   ├── build_and_deploy.ps1           # Build, image load, and manifest deployment
-│   └── test_endpoints.ps1             # End-to-end API sanity verification
-├── docker-compose.yml                 # Standalone local execution without K8s
-└── README.md
-```
+Cloud infrastructure is structured into four reusable Terraform modules (`terraform/modules/`) backed by an **Amazon S3 remote state backend** (`terraform/backend.tf`):
+
+1. **Network Module (`modules/network`):** Provisions an isolated VPC (`10.0.0.0/16`), dual-AZ Public and Private Subnets (`us-east-1a`, `us-east-1b`), Internet Gateway (IGW), NAT Gateway with Elastic IP, Route Tables, and stateless **Network ACLs (NACLs)** for public and private tiers.
+2. **Server Module (`modules/server`):** Provisions an Ubuntu EC2 instance for **Jenkins** inside the public subnet with a hardened Security Group (`22`, `8080`) and automated `user_data` bootstrapping for Docker, Java 17, AWS CLI, and Jenkins.
+3. **EKS Module (`modules/eks`):** Provisions an **Amazon EKS** cluster with IAM roles/policies and a Managed Node Group running **2 worker nodes** distributed across the private subnets in separate Availability Zones.
+4. **ECR Module (`modules/ecr`):** Provisions private container repositories (`ivolve/frontend`, `ivolve/auth-service`, `ivolve/roadmap-service`) with automated `scan_on_push` vulnerability scanning enabled.
 
 ---
 
-## Quick Start Guide
+## Key Engineering Highlights
 
-### Option 1: Standalone Run with Docker Compose
-To run the full stack immediately on your local Docker engine:
-```powershell
-docker compose up -d --build
-```
-Verify the services:
-```powershell
-docker compose ps
-curl http://localhost:8000/api/v1/health/ready
-curl http://localhost:8000/metrics
-```
+* **DRY Pipeline Architecture (Jenkins Shared Libraries):** Consolidated all build, validation, security scanning, registry push, and manifest-update stages inside `vars/ivolvePipeline.groovy`, keeping individual microservice `Jenkinsfile` definitions concise and declarative.
+* **Loop-Free GitOps Automation:** Prevented recursive webhook build loops caused by Jenkins committing updated image tags back to `main` through commit-author verification (`Jenkins CI`), `[skip ci]` commit messages, and clean workspace synchronization (`git fetch` + `git reset --hard`) across concurrent runs.
+* **Shift-Left Container Security (DevSecOps):** Embedded **Trivy** vulnerability scanning before registry publication to audit OS packages and application dependencies for `HIGH` and `CRITICAL` CVEs.
+* **Zero-Downtime Rolling Deployments:** Configured **Argo CD** automated drift detection and self-healing against multi-replica Kubernetes Deployments (`2/2` running pods per service) to guarantee continuous availability during rollouts.
+* **Actionable Build Observability:** Integrated SMTP HTML email notifications (`emailext`) delivering build metadata, tagged image references, direct console links, and the trailing 30 lines of error logs on build failures.
 
 ---
 
-### Option 2: Deploy to Kubernetes Cluster
+## Repository Structure
 
-#### Step 1: Initialize Local Cluster
-Ensure Docker Desktop is running. Then choose one of:
-- **Docker Desktop Kubernetes (Recommended on Windows)**:
-  - Docker Desktop Settings -> Kubernetes -> check **Enable Kubernetes** -> Apply & Restart.
-- **Minikube**:
-  ```powershell
-  minikube start --driver=docker
-  ```
-- **Kind**:
-  ```powershell
-  kind create cluster --name aiops-cluster
-  ```
-
-Run the cluster helper to verify:
-```powershell
-.\scripts\setup_cluster.ps1
-```
-
-#### Step 2: Build & Deploy
-Execute the one-click build and deployment script:
-```powershell
-.\scripts\build_and_deploy.ps1
-```
-
-#### Step 3: Access the Application
-- **Direct Access**: `http://localhost:30080` (if using Docker Desktop)
-- **Port-Forwarding**:
-  ```powershell
-  kubectl port-forward svc/backend-service 8000:8000 -n aiops
-  ```
-- **Swagger Documentation**: `http://localhost:8000/docs`
-- **Prometheus Metrics**: `http://localhost:8000/metrics`
-
-#### Step 4: Run Automated End-to-End Sanity Tests
-```powershell
-.\scripts\test_endpoints.ps1 -BaseUrl "http://localhost:8000"
-```
+    CloudDevOpsProject/
+    ├── auth-service/               # Authentication service source, Dockerfile, and Jenkinsfile
+    ├── frontend/                   # Frontend application source, Dockerfile, and Jenkinsfile
+    ├── roadmap-service/            # Roadmap API source, Dockerfile, and Jenkinsfile
+    ├── k8s/                        # Declarative Kubernetes manifests (Deployments, Services, Ingress, Secrets)
+    │   ├── 05-auth.yaml
+    │   ├── 06-roadmap.yaml
+    │   └── 07-frontend.yaml
+    ├── terraform/                  # Modular AWS Infrastructure as Code (S3 Remote Backend)
+    │   ├── backend.tf
+    │   ├── main.tf
+    │   ├── outputs.tf
+    │   ├── provider.tf
+    │   ├── variables.tf
+    │   └── modules/
+    │       ├── ecr/                # ECR container repositories
+    │       ├── eks/                # EKS cluster & multi-AZ private worker nodes
+    │       ├── network/            # VPC, Public/Private Subnets, IGW, NAT, NACLs
+    │       └── server/             # Jenkins EC2 instance & Security Groups
+    └── vars/
+        └── ivolvePipeline.groovy   # Global Jenkins Shared Library declarative pipeline
 
 ---
 
-## Phase 3: Telemetry & Data Pipeline (Prometheus & Logging)
+## Cluster Verification & IaC Quickstart
 
-### Overview
-Phase 3 establishes full cluster observability, programmatic telemetry query clients, and a background ingestion worker:
+### 1. Kubernetes & Argo CD Runtime Verification
+    kubectl get pods -n ivolve -o wide
+    kubectl describe pods -n ivolve | grep -i "Image:"
+    kubectl port-forward -n ivolve svc/frontend 3000:3000 &
+    kubectl port-forward -n ivolve svc/auth-service 5000:5000 &
+    kubectl port-forward -n ivolve svc/roadmap-service 8082:8080 &
 
-- **Monitoring Stack (`monitoring/`)**:
-  - `kube-prometheus-stack` deploying Prometheus Operator, Prometheus Server, and Grafana.
-  - Tailored `prometheus-values.yaml` (6h retention, lightweight CPU/RAM requests).
-  - ServiceMonitor (`backend-servicemonitor.yaml`) scraping `:8000/metrics` every 10 seconds.
-  - Pre-built Grafana Dashboard (`grafana-dashboard-aiops.json`) visualizing CPU, memory, RPS, error rate %, and chaos events.
-- **Log Aggregation Stack**:
-  - `loki-stack` deploying Grafana Loki and Promtail DaemonSet to ship container stdout JSON logs.
-- **Programmatic Python API Clients (`telemetry/`)**:
-  - `PrometheusClient`: Queries instant (`/api/v1/query`) and range (`/api/v1/query_range`) PromQL metrics (CPU, RAM, error rate %, P95 latency).
-  - `LogStoreClient`: Queries Loki API via LogQL with automatic fallback to `kubectl logs` for maximum reliability.
-- **Background Telemetry Ingestion Worker (`telemetry/ingestion_worker.py`)**:
-  - Continuously polls metric vectors and error logs every 10 seconds.
-  - Generates sliding window feature matrices (`TelemetryBuffer`) feeding Phase 4's AI model.
-  - Renders live telemetry tables in console and exports snapshots to `data/telemetry_latest.json`.
-
-### How to Run Monitoring & Telemetry
-
-#### Step 1: Install Prometheus, Grafana, and Loki via Helm
-```powershell
-.\scripts\install_monitoring.ps1
-```
-
-#### Step 2: Port-Forward Monitoring Services
-```powershell
-.\scripts\port_forward_monitoring.ps1
-```
-- **Prometheus**: [http://localhost:9090](http://localhost:9090)
-- **Grafana**: [http://localhost:3000](http://localhost:3000) (Login: `admin` / `admin`)
-- **Loki**: [http://localhost:3100](http://localhost:3100)
-
-#### Step 3: Run the Telemetry Ingestion Worker
-```powershell
-# Run a single evaluation test cycle:
-python telemetry/ingestion_worker.py --once
-
-# Or run the continuous background poller:
-python telemetry/ingestion_worker.py --interval 10
-```
-
----
-
-## Phase 4: AI Anomaly Detection & LLM Root Cause Analysis (RCA)
-
-### Overview
-Phase 4 implements automated anomaly detection and an intelligent Root Cause Analysis (RCA) pipeline powered by the fine-tuned Qwen2 LLM (`telemetry_rca_model`):
-
-- **Hybrid Anomaly Detector (`telemetry/anomaly_detector.py`)**:
-  - Unsupervised Machine Learning using `IsolationForest` fitted on steady-state telemetry baselines.
-  - SRE container boundary heuristics evaluating CPU quota exhaustion, memory leak trends, 5xx cascades, and latency degradation.
-- **LLM Inference Engine (`telemetry/llm_inference.py`)**:
-  - Implements the model's exact ChatML template (`<|im_start|>system ... <|im_end|>`).
-  - Correlates Prometheus metric vectors with Promtail/Loki container log traces.
-  - Dual-mode execution: loads fine-tuned weights (`telemetry_rca_model/`) or executes high-fidelity diagnostic reasoning.
-- **Root Cause Analysis (RCA) Engine (`telemetry/rca_engine.py`)**:
-  - Generates comprehensive incident diagnostics: Root cause diagnosis, technical mechanism, imminent risk assessment, telemetry matrix, and exact `kubectl` mitigation runbook commands.
-  - Automatically persists incident reports in JSON and Markdown formats (`data/rca_reports/INC-*.md`).
-  - Integrated into `telemetry/ingestion_worker.py` via `--enable-rca` for live real-time closed-loop alerting.
-
-### How to Run RCA Diagnosis
-
-#### 1. Evaluate Current Telemetry Snapshot
-```powershell
-python telemetry/rca_engine.py --eval
-```
-
-#### 2. Simulate Anomaly Diagnostics & Runbook Generation
-```powershell
-# Simulate memory leak / OOM diagnostic:
-python telemetry/rca_engine.py --anomaly memory_leak
-
-# Simulate HTTP 500 error cascade diagnostic:
-python telemetry/rca_engine.py --anomaly http_500_spike
-
-# Simulate CPU starvation / compute exhaustion:
-python telemetry/rca_engine.py --anomaly cpu_spike
-```
-
-#### 3. Run Ingestion Worker with Live RCA Enabled
-```powershell
-python telemetry/ingestion_worker.py --interval 10 --enable-rca
-```
-
----
-
-## Future Roadmap
-
-| Phase | Status | Key Deliverables |
-|---|---|---|
-| **Phase 1** | Completed | FastAPI, Postgres, Redis, K8s manifests, resource limits, health & chaos APIs |
-| **Phase 2** | Completed | Jenkinsfile CI/CD pipeline, Docker build/push, K8s dev deploy, HPA & PDB |
-| **Phase 3** | Completed | kube-prometheus-stack, Loki, Promtail, Python API clients, Telemetry Ingestion Worker |
-| **Phase 4** | Completed | Unsupervised ML anomaly detection (Isolation Forest), fine-tuned LLM RCA engine, automated runbooks |
-| **Phase 5** | Next | End-to-end chaos engineering tests, closed-loop verification, documentation & polish |
-
-
+### 2. Terraform Infrastructure Validation
+    cd terraform
+    terraform init
+    terraform validate
+    terraform plan
